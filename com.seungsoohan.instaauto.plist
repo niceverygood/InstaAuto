@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.seungsoohan.instaauto</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/seungsoohan/Projects/InstaAuto/run-scheduler.sh</string>
+    </array>
+
+    <!-- 10분마다 tick (스케줄러가 알아서 발행 시각 판단) -->
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/seungsoohan/Projects/InstaAuto/logs/launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/seungsoohan/Projects/InstaAuto/logs/launchd.log</string>
+</dict>
+</plist>

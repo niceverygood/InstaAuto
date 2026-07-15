@@ -1,0 +1,18 @@
+{
+  "name": "instaauto",
+  "version": "1.0.0",
+  "description": "인스타그램 콘텐츠 자동 생성 + 업로드 + 슬랙 보고 파이프라인",
+  "main": "scripts/scheduler.js",
+  "type": "commonjs",
+  "scripts": {
+    "login": "node scripts/login-instagram.js",
+    "generate": "node scripts/generate-content.js",
+    "post-now": "node scripts/run-once.js",
+    "tick": "node scripts/scheduler.js",
+    "render-test": "node scripts/render-card.js --test"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1087.0",
+    "playwright": "^1.60.0"
+  }
+}

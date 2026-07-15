@@ -1,0 +1,10 @@
+{
+  "slots": {
+    "morning":   { "start": "09:00", "end": "11:30" },
+    "afternoon": { "start": "14:00", "end": "17:30" }
+  },
+  "maxAttemptsPerSlot": 3,
+  "headlessPosting": false,
+  "imageMode": "ai-bg",
+  "llmModel": "sonnet"
+}

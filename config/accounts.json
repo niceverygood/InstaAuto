@@ -1,0 +1,30 @@
+{
+  "accounts": [
+    {
+      "id": "bobi",
+      "username": "bobiai2026",
+      "displayName": "보비 (AI 보험비서)",
+      "persona": "config/personas/bobi.md",
+      "enabled": true,
+      "theme": {
+        "bg": "#2B3BE6",
+        "accent": "#FFD400",
+        "text": "#FFFFFF",
+        "footer": "@bobiai2026"
+      }
+    },
+    {
+      "id": "sample-second-account",
+      "username": "your_second_account",
+      "displayName": "두 번째 계정 (예시 — enabled:false)",
+      "persona": "config/personas/sample.md",
+      "enabled": false,
+      "theme": {
+        "bg": "#111111",
+        "accent": "#00E5A0",
+        "text": "#FFFFFF",
+        "footer": "@your_second_account"
+      }
+    }
+  ]
+}

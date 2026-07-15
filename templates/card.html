@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1350px; }
+  #card {
+    width: 1080px;
+    height: 1350px;
+    background: {{BG}};
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, 'Noto Sans KR', sans-serif;
+    overflow: hidden;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    background: {{OVERLAY}};
+  }
+  .content { position: relative; z-index: 2; padding: 0 70px; width: 100%; }
+  .hook {
+    color: {{TEXT}};
+    font-size: 44px;
+    font-weight: 600;
+    opacity: 0.95;
+    margin-bottom: 46px;
+    letter-spacing: -0.5px;
+  }
+  .title {
+    color: {{TEXT}};
+    font-size: 108px;
+    font-weight: 800;
+    line-height: 1.32;
+    letter-spacing: -2px;
+    word-break: keep-all;
+  }
+  .title .accent { color: {{ACCENT}}; }
+  .footer {
+    position: absolute;
+    bottom: 54px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: {{TEXT}};
+    opacity: 0.65;
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    z-index: 2;
+  }
+</style>
+</head>
+<body>
+  <div id="card">
+    <div id="overlay"></div>
+    <div class="content">
+      <div class="hook">{{HOOK}}</div>
+      <div class="title">{{TITLE_HTML}}</div>
+      <div style="margin-top:70px;color:{{TEXT}};opacity:0.55;font-size:36px;font-weight:600;">{{SWIPE}}</div>
+    </div>
+    <div class="footer">{{FOOTER}}</div>
+  </div>
+</body>
+</html>
