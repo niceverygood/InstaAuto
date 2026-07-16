@@ -42,7 +42,11 @@ cd C:\<클론위치>\InstaAuto
 powershell -ExecutionPolicy Bypass -File scripts\setup-windows.ps1
 ```
 
-필요한 값 3종은 스크립트가 물어볼 때 붙여넣으면 된다: R2 키(Cloudflare 대시보드), 인스타 액세스 토큰(Meta 대시보드 — SETUP-API.md 3단계), claude 로그인(구독). 이미 끝난 단계는 재실행 시 자동으로 건너뛴다.
+업로드 방식은 스크립트가 물어본다:
+- **[1] 공식 API**: R2 키(Cloudflare) + 인스타 액세스 토큰(Meta 대시보드) 붙여넣기 필요. 안정적 — 장기 운영 권장.
+- **[2] 웹 자동화**: 아무 가입 불필요. Chrome 창이 열리면 인스타 로그인만 하면 된다 (가끔 캡차/보안확인 리스크).
+
+claude 로그인(구독)은 두 방식 모두 필요. 이미 끝난 단계는 재실행 시 자동으로 건너뛴다.
 단, 스케줄러(launchd)는 macOS 전용 — 윈도우는 수동 실행(`node scripts\run-once.js <계정>`) 용도.
 
 ## 스케줄러 켜기 / 끄기
