@@ -94,6 +94,15 @@ node scripts/scheduler.js                        # tick 1회 수동 실행
 
 슬랙 웹훅 / R2 / OpenAI 키는 `config/settings.json`이 아니라 **`.env`** 에 저장 (git에 커밋되지 않음).
 
+### 슬랙 알림을 보내는 봇 바꾸기 (예: 도모봇 → 바틀봇)
+
+슬랙에 표시되는 "보낸 봇"은 **웹훅/토큰을 소유한 Slack 앱**이다. `.env` 를 바꾸면 된다 (코드 수정 불필요):
+
+- **방법 1 (웹훅, 권장)**: `.env` 의 `SLACK_WEBHOOK_URL` 값을 바틀봇 앱의 웹훅 URL 로 교체.
+  wishket-automation 이 바틀봇으로 같은 채널에 보내고 있다면 그쪽 `.env` 의 웹훅 URL 을 그대로 복사하면 끝.
+- **방법 2 (봇 토큰)**: `.env` 에 `SLACK_BOT_TOKEN=xoxb-…` 와 `SLACK_CHANNEL_ID=C…` 추가.
+  둘 다 있으면 웹훅 대신 `chat.postMessage` 로 전송하며, 토큰 소유 앱(바틀봇)으로 표시된다.
+
 ## 동작 구조
 
 ```
@@ -120,3 +129,5 @@ launchd (10분마다) → run-scheduler.sh → scheduler.js
 | 계정 잠금/인증 요구 | 자동화 감지 | headlessPosting=false 유지, 하루 2회 이하 유지 (현재 설계) |
 | launchd 미발화 | 폴더 권한 | ~/Projects 는 OK. ~/Desktop, ~/Documents 로 이동 금지 |
 | LLM JSON 파싱 실패 | 형식 이탈 | 자동 2회 재시도. 지속 시 `config/personas/*.md` 의 형식 지시 강화 |
+| LLM 생성 실패 (⏳ 사용 한도) | Claude 구독 사용 한도(5시간 윈도우) 도달 — 같은 구독을 쓰는 다른 자동화(wishket 등)와 공유됨 | 리셋 시각 이후 회차에서 자동 재시도. 슬랙 메시지에 리셋 시각 표시 |
+| LLM 생성 실패 (🔑 인증 만료) | claude CLI 로그인 세션 만료 | 터미널에서 `claude` 실행 후 `/login` |

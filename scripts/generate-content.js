@@ -114,6 +114,7 @@ async function generateContent(accountId, slot = 'manual') {
     } catch (err) {
       lastErr = err;
       console.error(`[생성] LLM 시도 ${attempt}/2 실패: ${err.message.split('\n')[0]}`);
+      if (err.retryable === false) break; // 한도 도달/인증 만료 — 즉시 재시도 무의미
     }
   }
   if (!content) throw new Error(`LLM 생성 실패: ${lastErr?.message}`);

@@ -60,8 +60,11 @@ async function main() {
   saveLog(`gen-${accountId}-${slot}`, genResult);
 
   if (genResult.status !== 0) {
-    const errTail = (genResult.stderr || genResult.stdout || '').slice(-300);
-    await sendSlack(`❌ 인스타 콘텐츠 생성 실패 | ${tag}\n오류: ${errTail.slice(-200)}`);
+    // 원인 요약은 "❌ 생성 실패:" 줄 앞부분에 있음 — 무작정 tail 을 자르면 명령어만 남는다
+    const combined = `${genResult.stderr || ''}\n${genResult.stdout || ''}`;
+    const failMatch = combined.match(/❌ 생성 실패:([\s\S]{0,400})/);
+    const errText = (failMatch ? failMatch[1] : combined.slice(-300)).trim().slice(0, 400);
+    await sendSlack(`❌ 인스타 콘텐츠 생성 실패 | ${tag}\n오류: ${errText}`);
     console.error(`❌ 생성 실패`);
     process.exit(1);
   }
