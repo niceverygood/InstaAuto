@@ -33,6 +33,18 @@ node scripts/setup-token.js bobi '<발급받은 토큰>'
 
 > (비권장 폴백) 웹 자동화를 쓰려면 `node scripts/login-instagram.js bobi` — 캡차 무한반복 리스크 있음.
 
+### 윈도우 PC에서 셋업 (Mac 없이)
+
+PowerShell에서 한 줄 — 의존성 설치부터 토큰 등록·업로드 실행까지 안내에 따라 진행:
+
+```powershell
+cd C:\<클론위치>\InstaAuto
+powershell -ExecutionPolicy Bypass -File scripts\setup-windows.ps1
+```
+
+필요한 값 3종은 스크립트가 물어볼 때 붙여넣으면 된다: R2 키(Cloudflare 대시보드), 인스타 액세스 토큰(Meta 대시보드 — SETUP-API.md 3단계), claude 로그인(구독). 이미 끝난 단계는 재실행 시 자동으로 건너뛴다.
+단, 스케줄러(launchd)는 macOS 전용 — 윈도우는 수동 실행(`node scripts\run-once.js <계정>`) 용도.
+
 ## 스케줄러 켜기 / 끄기
 
 ```bash
