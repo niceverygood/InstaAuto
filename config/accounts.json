@@ -14,6 +14,19 @@
       }
     },
     {
+      "id": "theone",
+      "username": "the_one_meet",
+      "displayName": "THE ONE (더원)",
+      "persona": "config/personas/theone.md",
+      "enabled": true,
+      "theme": {
+        "bg": "#0F1014",
+        "accent": "#B8956A",
+        "text": "#EDE8DE",
+        "footer": "@the_one_meet"
+      }
+    },
+    {
       "id": "sample-second-account",
       "username": "your_second_account",
       "displayName": "두 번째 계정 (예시 — enabled:false)",

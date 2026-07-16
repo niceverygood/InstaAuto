@@ -3,7 +3,7 @@
  * 한 계정의 전체 파이프라인 실행: 콘텐츠 생성 → 업로드 → 슬랙 보고
  * (wishket-scheduler 의 spawnSync + 로그 보존 패턴)
  *
- * Usage: node scripts/run-once.js <accountId> [--slot morning|afternoon|manual]
+ * Usage: node scripts/run-once.js <accountId> [--slot post-1|post-2|...|manual]
  * Exit:  0 성공 / 1 실패 / 2 로그인 필요
  */
 const fs = require('fs');
@@ -13,7 +13,11 @@ const { WORKSPACE, LOGS_DIR } = require('../lib/workspace');
 const { getAccount } = require('../lib/settings');
 const { sendSlack } = require('../lib/slack');
 
-const SLOT_LABEL = { morning: '오전 회차', afternoon: '오후 회차', manual: '수동 실행' };
+function slotLabelFor(slot) {
+  if (slot === 'manual') return '수동 실행';
+  const m = /^post-(\d+)$/.exec(slot);
+  return m ? `${m[1]}회차` : `${slot} 회차`;
+}
 
 function saveLog(name, result) {
   try {
@@ -40,7 +44,7 @@ async function main() {
   }
   const slotIdx = process.argv.indexOf('--slot');
   const slot = slotIdx > -1 ? process.argv[slotIdx + 1] : 'manual';
-  const slotLabel = SLOT_LABEL[slot] || slot;
+  const slotLabel = slotLabelFor(slot);
   const account = getAccount(accountId);
   const tag = `${account.displayName} (@${account.username}) · ${slotLabel}`;
 

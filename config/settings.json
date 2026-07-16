@@ -1,7 +1,9 @@
 {
-  "slots": {
-    "morning":   { "start": "09:00", "end": "11:30" },
-    "afternoon": { "start": "14:00", "end": "17:30" }
+  "posting": {
+    "activeStart": "09:00",
+    "activeEnd": "22:00",
+    "intervalHours": 4,
+    "jitterMinutes": 40
   },
   "maxAttemptsPerSlot": 3,
   "headlessPosting": false,

@@ -216,10 +216,12 @@ if (require.main === module) {
   (async () => {
     const [accountId, imagePath, captionPath] = process.argv.slice(2);
     if (!accountId || !imagePath || !captionPath) {
-      console.error('사용법: node scripts/post-instagram.js <accountId> <imagePath> <captionPath>');
+      console.error('사용법: node scripts/post-instagram.js <accountId> <imagePath[,path2,...]> <captionPath>');
       process.exit(1);
     }
-    if (!fs.existsSync(imagePath)) { console.error(`이미지 없음: ${imagePath}`); process.exit(1); }
+    for (const p of imagePath.split(',').map(s => s.trim()).filter(Boolean)) {
+      if (!fs.existsSync(p)) { console.error(`이미지 없음: ${p}`); process.exit(1); }
+    }
     if (!fs.existsSync(captionPath)) { console.error(`캡션 없음: ${captionPath}`); process.exit(1); }
     const caption = fs.readFileSync(captionPath, 'utf-8').trim();
     try {

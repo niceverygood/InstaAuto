@@ -1,14 +1,15 @@
 # InstaAuto
 
 인스타그램 콘텐츠 **자동 생성 → 자동 업로드 → 슬랙 보고** 파이프라인.
-매일 오전/오후 각 1회, 윈도우 내 **랜덤 시각**에 등록된 모든 계정에 카드 게시물을 올린다.
+매일 활동 시간대(기본 09:00~22:00) 안에서 **4시간±지터 간격으로 랜덤 시각**을 여러 회 추첨해
+등록된 모든 계정에 카드뉴스를 올린다 (기본 설정 기준 하루 약 4회).
 
 - **콘텐츠 생성**: claude CLI (구독 사용, API 크레딧 X) — 계정별 페르소나 기반 카드 문구 + 캡션 + 해시태그
 - **이미지**: **카드뉴스(캐러셀) 5~7장** — 표지 + 내용 카드 3~5장 + CTA 카드. HTML 템플릿 → Playwright 스크린샷 (1080×1350 JPEG, 한글 완벽 렌더). 템플릿: `templates/card.html`(표지) / `card-content.html`(내용) / `card-cta.html`(CTA)
-  - 옵션: `OPENAI_API_KEY` 설정 + `imageMode: "ai-bg"` 면 gpt-image-2 배경 생성
+  - 표지 배경: `OPENAI_API_KEY` (`.env`) + `imageMode: "ai-bg"` 면 gpt-image-2 로 생성 (기본 활성화)
 - **업로드 (기본)**: **Instagram 공식 API** — R2 공개 URL 업로드 후 Graph API 발행. 캡차/봇감지/세션만료 없음. **[SETUP-API.md](SETUP-API.md) 참고 (계정당 1회, 10분)**
 - **업로드 (폴백)**: API 토큰 없는 계정은 Playwright 웹 자동화 (캡차 리스크 있음 — 비권장)
-- **스케줄**: launchd 10분 tick + 랜덤 발행 시각 (잠자기/재부팅에도 그날 회차 안 놓침)
+- **스케줄**: launchd 10분 tick + **4시간 간격 랜덤 발행** (잠자기/재부팅에도 그날 회차 안 놓침)
 - **보고**: 슬랙 웹훅 (성공/실패/토큰 만료)
 
 *wishket-automation 의 검증된 패턴 재사용: persistent context, reactSafe 검증, 거짓 성공 방지(성공 문구 명시 확인), launchd PATH/caffeinate, 실패 시 재시도.*
@@ -83,18 +84,21 @@ node scripts/scheduler.js                        # tick 1회 수동 실행
 
 | 키 | 설명 | 기본값 |
 |---|---|---|
-| `slackWebhookUrl` | 슬랙 웹훅 (위시켓과 동일 채널. 바꾸려면 새 웹훅 발급) | 기존 웹훅 |
-| `slots` | 발행 윈도우. 이 범위 안에서 매일 랜덤 시각 추첨 | 오전 09:00–11:30 / 오후 14:00–17:30 |
+| `posting.activeStart` / `activeEnd` | 발행이 일어날 수 있는 하루 활동 시간대 | 09:00 ~ 22:00 |
+| `posting.intervalHours` | 발행 간 목표 간격(시간) | 4 |
+| `posting.jitterMinutes` | 간격에 더해지는 랜덤 오차(±분) — 매번 정확히 4시간이 아니라 자연스럽게 흔들림 | 40 |
 | `maxAttemptsPerSlot` | 회차당 계정별 최대 재시도 (10분 간격) | 3 |
-| `headlessPosting` | 업로드 브라우저 headless 여부. `false` 권장 (봇 감지 회피) | false |
-| `imageMode` | `"card"`(단색 카드) 또는 `"ai-bg"`(gpt-image-2 배경) | card |
+| `headlessPosting` | 웹 자동화 폴백 사용 시 headless 여부. `false` 권장 (봇 감지 회피) | false |
+| `imageMode` | `"card"`(단색 카드) 또는 `"ai-bg"`(gpt-image-2 배경) | ai-bg |
 | `llmModel` | claude CLI 모델 | sonnet |
+
+슬랙 웹훅 / R2 / OpenAI 키는 `config/settings.json`이 아니라 **`.env`** 에 저장 (git에 커밋되지 않음).
 
 ## 동작 구조
 
 ```
 launchd (10분마다) → run-scheduler.sh → scheduler.js
-  ├─ 오늘 계획 없으면: 오전/오후 랜덤 시각 추첨 → data/schedule.json
+  ├─ 오늘 계획 없으면: activeStart~activeEnd 사이 4시간±지터 간격으로 여러 회차 시각 추첨 → data/schedule.json
   └─ 발행 시각 지난 슬롯 → 계정별 run-once.js
        ├─ generate-content.js  (claude CLI → JSON → 카드 PNG 렌더)
        ├─ post-instagram.js    (만들기 → 업로드 → 원본비율 → 다음×2 → 캡션 → 공유 → 성공 문구 검증)
