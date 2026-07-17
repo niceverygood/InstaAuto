@@ -3,8 +3,8 @@
  * InstaAuto 스케줄러 (tick 방식)
  *
  * launchd 가 10분마다 이 스크립트를 실행한다. 각 tick 에서:
- *   1. 오늘의 발행 시각표가 없으면 생성 — activeStart 부터 시작해서
- *      매 intervalHours(±jitterMinutes) 간격으로 activeEnd 까지 여러 회차 추첨
+ *   1. 오늘의 발행 시각표가 없으면 생성 — settings.posting.windows 에 정의된
+ *      피드 참여율 높은 시간대(점심/퇴근/저녁 황금시간)마다 랜덤 시각 1개씩 추첨
  *   2. 발행 시각이 지났고 아직 안 올린 슬롯이 있으면 → 계정별 run-once 실행
  *   3. 실패 시 다음 tick(10분 후) 재시도, 계정별 최대 N회 후 포기
  *
@@ -43,26 +43,20 @@ function minToHM(min) {
 }
 
 /**
- * activeStart 부터 시작해 매 intervalHours(±jitterMinutes) 간격으로
- * activeEnd 를 넘지 않는 선에서 발행 시각들을 추첨.
- * 예: 09:00 시작, 4시간 간격, ±40분 지터, 22:00 종료 → 대략 4회 (09:xx / 13:xx / 17:xx / 21:xx)
+ * settings.posting.windows 의 각 시간대(피드 참여율이 높은 구간)마다
+ * 랜덤 시각을 1개씩 추첨 — 창 개수만큼 발행 회차가 생긴다.
+ * 예: 점심(11:00~13:00) / 퇴근(17:30~19:30) / 저녁 황금시간(20:30~22:00)
+ *     → 매일 다른 시각이지만 항상 참여율 높은 구간 안에서만 발행된다.
  */
 function generateSlotTimes(posting) {
-  const startMin = toMin(posting.activeStart);
-  const endMin = toMin(posting.activeEnd);
-  const intervalMin = Math.round((posting.intervalHours || 4) * 60);
-  const jitter = Math.max(0, posting.jitterMinutes || 0);
-
-  const jitterPick = () => Math.floor(Math.random() * (jitter * 2 + 1)) - jitter; // -jitter..+jitter
-
-  const times = [];
-  let t = startMin + (jitter ? jitterPick() : 0);
-  t = Math.max(startMin, t);
-  while (t <= endMin) {
-    times.push(t);
-    t += intervalMin + jitterPick();
-  }
-  return times.map(minToHM);
+  const windows = posting.windows || [];
+  const times = windows.map(w => {
+    const startMin = toMin(w.start);
+    const endMin = toMin(w.end);
+    const span = Math.max(0, endMin - startMin);
+    return startMin + Math.floor(Math.random() * (span + 1));
+  });
+  return times.sort((a, b) => a - b).map(minToHM);
 }
 
 function loadState() {
@@ -113,7 +107,7 @@ function ensureTodayPlan(state, settings) {
   });
   state[today] = plan;
   saveState(state);
-  console.log(`📅 오늘(${today}) 발행 계획 생성 (총 ${times.length}회, ${settings.posting.intervalHours}시간±${settings.posting.jitterMinutes}분 간격): ` +
+  console.log(`📅 오늘(${today}) 발행 계획 생성 (총 ${times.length}회): ` +
     Object.entries(plan.slots).map(([n, s]) => `${n}=${s.time}`).join(', '));
   return plan;
 }
