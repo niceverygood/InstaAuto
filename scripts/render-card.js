@@ -91,7 +91,7 @@ async function renderSlides(content, theme, outDir, { bgImageDataUri = null } = 
     ? `url('${bgImageDataUri}') no-repeat center / cover, ${theme.bg || '#2B3BE6'}`
     : null;
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_BIN || undefined });
   const paths = [];
   try {
     const page = await browser.newPage({ viewport: { width: 1080, height: 1350 } });
@@ -128,7 +128,7 @@ async function renderCard(content, theme, outPath, { bgImageDataUri = null } = {
   const bgOverride = bgImageDataUri
     ? `url('${bgImageDataUri}') no-repeat center / cover, ${theme.bg || '#2B3BE6'}`
     : null;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_BIN || undefined });
   try {
     const page = await browser.newPage({ viewport: { width: 1080, height: 1350 } });
     await shootHtml(page, coverHtml(content, theme, { hasMoreSlides: false, bgOverride }), outPath);
