@@ -47,7 +47,18 @@ powershell -ExecutionPolicy Bypass -File scripts\setup-windows.ps1
 - **[2] 웹 자동화**: 아무 가입 불필요. Chrome 창이 열리면 인스타 로그인만 하면 된다 (가끔 캡차/보안확인 리스크).
 
 claude 로그인(구독)은 두 방식 모두 필요. 이미 끝난 단계는 재실행 시 자동으로 건너뛴다.
-단, 스케줄러(launchd)는 macOS 전용 — 윈도우는 수동 실행(`node scripts\run-once.js <계정>`) 용도.
+
+**10분마다 자동 반복 발행**시키려면 (Mac 의 launchd 에 대응, 작업 스케줄러 사용 — 관리자 권한 PowerShell 권장):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\setup-scheduler-windows.ps1
+```
+
+끄기: `schtasks /delete /tn "InstaAuto Scheduler" /f`
+로그: `logs\scheduler.log`
+
+> ⚠️ **같은 계정을 두 곳(예: Mac 과 윈도우)에서 동시에 자동 발행시키지 말 것** — 중복 게시된다.
+> 윈도우를 주력으로 쓴다면 Mac 쪽 launchd 는 반드시 꺼야 한다 (`launchctl unload -w ~/Library/LaunchAgents/com.seungsoohan.instaauto.plist`).
 
 ## 스케줄러 켜기 / 끄기
 
@@ -141,7 +152,9 @@ launchd (10분마다) → run-scheduler.sh → scheduler.js
 | 업로드 버튼 못 찾음 | 인스타 UI 개편 | `post-instagram.js` 셀렉터 배열에 새 셀렉터 추가 (ko/en 병기) |
 | 세션 만료 반복 | 인스타 보안 로그아웃 | login-instagram.js 재실행. 같은 IP/기기 유지 권장 |
 | 계정 잠금/인증 요구 (웹 자동화 폴백 사용 시) | 자동화 감지 | headlessPosting=false 유지. 하루 5회는 웹 자동화 기준 다소 공격적 — 잠금 반복되면 `posting.windows` 를 3~4개로 줄이거나 [SETUP-API.md](SETUP-API.md) 로 공식 API 전환 권장 (API 는 24시간당 100개 한도라 하루 5회 문제 없음) |
-| launchd 미발화 | 폴더 권한 | ~/Projects 는 OK. ~/Desktop, ~/Documents 로 이동 금지 |
+| launchd 미발화 (Mac) | 폴더 권한 | ~/Projects 는 OK. ~/Desktop, ~/Documents 로 이동 금지 |
+| 작업 스케줄러 등록 실패 (윈도우) | 관리자 권한 필요 | PowerShell 을 "관리자 권한으로 실행"한 뒤 `setup-scheduler-windows.ps1` 재실행 |
+| 같은 계정에 중복 게시 | Mac 과 윈도우에서 동시에 자동 발행 중 | 한쪽 스케줄러를 꺼서 한 PC만 담당하게 할 것 |
 | LLM JSON 파싱 실패 | 형식 이탈 | 자동 2회 재시도. 지속 시 `config/personas/*.md` 의 형식 지시 강화 |
 | LLM 생성 실패 (⏳ 사용 한도) | Claude 구독 사용 한도(5시간 윈도우) 도달 — 같은 구독을 쓰는 다른 자동화(wishket 등)와 공유됨 | 리셋 시각 이후 회차에서 자동 재시도. 슬랙 메시지에 리셋 시각 표시 |
 | LLM 생성 실패 (🔑 인증 만료) | claude CLI 로그인 세션 만료 | 터미널에서 `claude` 실행 후 `/login` |
