@@ -6,7 +6,9 @@
 # 하는 일: 의존성 설치 → claude CLI 설치/로그인 확인 → 업로드 방식 선택
 #   [1] 공식 API  — R2(Cloudflare) + Meta 토큰 필요 (안정적, 캡차 없음)
 #   [2] 웹 자동화 — 아무 가입 불필요, 인스타 로그인만 (캡차 리스크 있음)
-# → 보비/더원 업로드 실행. 이미 끝난 단계는 재실행 시 자동으로 건너뛴다.
+# → .env(슬랙/이미지) 설정 → 보비/더원 업로드 실행.
+# 이미 끝난 단계는 재실행 시 자동으로 건너뛴다.
+# 10분마다 자동 반복시키려면 이 스크립트 다음에 setup-scheduler-windows.ps1 을 실행한다.
 
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
@@ -21,27 +23,27 @@ $accounts = @(
 )
 
 # ── 1. node 확인 ──
-Step "1/6 Node.js 확인"
+Step "1/8 Node.js 확인"
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
   Fail "Node.js 가 없습니다. https://nodejs.org 에서 LTS 설치 후 다시 실행하세요."
 }
 Ok "node $(node --version)"
 
 # ── 2. npm 의존성 ──
-Step "2/6 npm 의존성 설치"
+Step "2/8 npm 의존성 설치"
 if (-not (Test-Path "node_modules")) {
   npm install
   if ($LASTEXITCODE -ne 0) { Fail "npm install 실패" }
 } else { Ok "node_modules 이미 있음 (건너뜀)" }
 
 # ── 3. Playwright chromium (카드 이미지 렌더용) ──
-Step "3/6 Playwright chromium"
+Step "3/8 Playwright chromium"
 npx playwright install chromium
 if ($LASTEXITCODE -ne 0) { Fail "playwright chromium 설치 실패" }
 Ok "chromium 준비 완료"
 
 # ── 4. claude CLI 설치 + 로그인 확인 ──
-Step "4/6 claude CLI"
+Step "4/8 claude CLI"
 if (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
   Write-Host "  claude CLI 설치 중..."
   npm install -g "@anthropic-ai/claude-code"
@@ -61,9 +63,8 @@ if ($LASTEXITCODE -ne 0) {
 Ok "claude CLI 로그인 확인"
 
 # ── 5. 업로드 방식 선택 + 계정 준비 ──
-Step "5/6 업로드 방식"
+Step "5/8 업로드 방식"
 
-# 이미 준비된 계정이 있으면 감지해서 알려줌
 $apiReady = @($accounts | Where-Object { Test-Path "data\credentials-$($_.id).json" }).Count
 $webReady = @($accounts | Where-Object { Test-Path ".browser-profiles\$($_.id)\Default" }).Count
 if ($apiReady -eq $accounts.Count) {
@@ -79,31 +80,6 @@ if ($apiReady -eq $accounts.Count) {
 }
 
 if ($mode -eq "1") {
-  # ── 공식 API: .env(R2) + 토큰 ──
-  if (Test-Path ".env") {
-    Ok ".env 이미 있음 (수정하려면 notepad .env)"
-  } else {
-    Write-Host "  R2 값: https://dash.cloudflare.com/?to=/:account/r2/api-tokens 에서 발급"
-    do { $r2endpoint = Read-Host "  R2_ACCOUNT_ENDPOINT (https://<계정ID>.r2.cloudflarestorage.com)" } while (-not $r2endpoint)
-    do { $r2key      = Read-Host "  R2_ACCESS_KEY_ID" } while (-not $r2key)
-    do { $r2secret   = Read-Host "  R2_SECRET_ACCESS_KEY" } while (-not $r2secret)
-    do { $r2bucket   = Read-Host "  R2_BUCKET (버킷 이름)" } while (-not $r2bucket)
-    do { $r2public   = Read-Host "  R2_PUBLIC_URL (버킷 공개 URL, https://...)" } while (-not $r2public)
-    $slack  = Read-Host "  SLACK_WEBHOOK_URL (바틀봇 웹훅 — 없으면 Enter)"
-    $openai = Read-Host "  OPENAI_API_KEY (표지 AI 배경 — 없으면 Enter, 단색 배경)"
-    $lines = @(
-      "# InstaAuto .env (setup-windows.ps1 생성)",
-      "R2_ACCOUNT_ENDPOINT=$r2endpoint",
-      "R2_ACCESS_KEY_ID=$r2key",
-      "R2_SECRET_ACCESS_KEY=$r2secret",
-      "R2_BUCKET=$r2bucket",
-      "R2_PUBLIC_URL=$r2public"
-    )
-    if ($slack)  { $lines += "SLACK_WEBHOOK_URL=$slack" }
-    if ($openai) { $lines += "OPENAI_API_KEY=$openai" }
-    $lines -join "`n" | Out-File -FilePath ".env" -Encoding utf8
-    Ok ".env 저장 완료"
-  }
   foreach ($acc in $accounts) {
     if (Test-Path "data\credentials-$($acc.id).json") { Ok "$($acc.name) 토큰 이미 등록됨"; continue }
     Write-Host ""
@@ -114,7 +90,6 @@ if ($mode -eq "1") {
     if ($LASTEXITCODE -ne 0) { Fail "$($acc.name) 토큰 등록 실패 — 토큰 재발급 후 스크립트를 재실행하세요." }
   }
 } else {
-  # ── 웹 자동화: 가입 불필요, 인스타 로그인 세션만 저장 ──
   $chromePaths = @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
     "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
@@ -136,8 +111,57 @@ if ($mode -eq "1") {
   }
 }
 
-# ── 6. 업로드 실행 ──
-Step "6/6 업로드"
+# ── 6. .env 설정 (슬랙 알림 / R2 / 이미지) — 업로드 방식과 무관하게 항상 실행 ──
+Step "6/8 .env 설정 (슬랙 알림 등)"
+
+$envPath = ".env"
+$envLines = @()
+if (Test-Path $envPath) { $envLines = @(Get-Content $envPath) }
+
+function Get-EnvValue($key) {
+  $line = $envLines | Where-Object { $_ -match "^$key=" } | Select-Object -First 1
+  if ($line) { return ($line -replace "^$key=", "") }
+  return $null
+}
+function Set-EnvValue($key, $value) {
+  if (-not $value) { return }
+  $script:envLines = @($script:envLines | Where-Object { $_ -notmatch "^$key=" })
+  $script:envLines += "$key=$value"
+}
+
+if ($mode -eq "1" -and -not (Get-EnvValue "R2_ACCOUNT_ENDPOINT")) {
+  Write-Host "  R2 값: https://dash.cloudflare.com/?to=/:account/r2/api-tokens 에서 발급"
+  do { $r2endpoint = Read-Host "  R2_ACCOUNT_ENDPOINT (https://<계정ID>.r2.cloudflarestorage.com)" } while (-not $r2endpoint)
+  do { $r2key      = Read-Host "  R2_ACCESS_KEY_ID" } while (-not $r2key)
+  do { $r2secret   = Read-Host "  R2_SECRET_ACCESS_KEY" } while (-not $r2secret)
+  do { $r2bucket   = Read-Host "  R2_BUCKET (버킷 이름)" } while (-not $r2bucket)
+  do { $r2public   = Read-Host "  R2_PUBLIC_URL (버킷 공개 URL, https://...)" } while (-not $r2public)
+  Set-EnvValue "R2_ACCOUNT_ENDPOINT" $r2endpoint
+  Set-EnvValue "R2_ACCESS_KEY_ID" $r2key
+  Set-EnvValue "R2_SECRET_ACCESS_KEY" $r2secret
+  Set-EnvValue "R2_BUCKET" $r2bucket
+  Set-EnvValue "R2_PUBLIC_URL" $r2public
+} elseif ($mode -eq "1") {
+  Ok "R2 설정 이미 있음"
+}
+
+if (-not (Get-EnvValue "SLACK_WEBHOOK_URL")) {
+  $slack = Read-Host "  SLACK_WEBHOOK_URL (바틀봇 웹훅 — 없으면 Enter, 슬랙 보고 생략)"
+  Set-EnvValue "SLACK_WEBHOOK_URL" $slack
+} else {
+  Ok "SLACK_WEBHOOK_URL 이미 설정됨"
+}
+
+if ($mode -eq "1" -and -not (Get-EnvValue "OPENAI_API_KEY")) {
+  $openai = Read-Host "  OPENAI_API_KEY (표지 AI 배경 — 없으면 Enter, 단색 배경 사용)"
+  Set-EnvValue "OPENAI_API_KEY" $openai
+}
+
+$envLines | Set-Content -Path $envPath -Encoding utf8
+Ok ".env 저장 완료"
+
+# ── 7. 업로드 실행 ──
+Step "7/8 업로드"
 $go = Read-Host "지금 바로 두 계정 업로드를 실행할까요? (Y/n)"
 if ($go -eq "" -or $go -match "^[yY]") {
   foreach ($acc in $accounts) {
@@ -147,9 +171,26 @@ if ($go -eq "" -or $go -match "^[yY]") {
     elseif ($LASTEXITCODE -eq 2)  { Write-Host "  [인증 문제] $($acc.name) — 위 로그 확인" -ForegroundColor Yellow }
     else                          { Write-Host "  [실패] $($acc.name) — 위 로그 확인" -ForegroundColor Red }
   }
-  Write-Host "`n끝. 결과는 위 로그(와 슬랙 설정 시 슬랙 알림)를 확인하세요." -ForegroundColor Cyan
 } else {
-  Write-Host "`n셋업만 완료. 업로드는 다음 명령으로:" -ForegroundColor Cyan
+  Write-Host "`n셋업만 완료. 수동 업로드는 다음 명령으로:" -ForegroundColor Cyan
   Write-Host "  node scripts\run-once.js bobi"
   Write-Host "  node scripts\run-once.js theone"
+}
+
+# ── 8. 스케줄러 등록 (10분마다 자동 반복) ──
+Step "8/8 자동 반복 스케줄러"
+$goSched = Read-Host "지금 10분마다 자동 발행되도록 등록할까요? (관리자 권한 필요) (Y/n)"
+if ($goSched -eq "" -or $goSched -match "^[yY]") {
+  $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  $schedulerScript = Join-Path $PSScriptRoot "setup-scheduler-windows.ps1"
+  if ($isAdmin) {
+    & $schedulerScript
+  } else {
+    Write-Host "  관리자 권한이 필요합니다 — Windows 보안 창(UAC)이 뜨면 '예'를 눌러주세요." -ForegroundColor Yellow
+    Start-Process powershell -Verb RunAs -ArgumentList "-NoExit","-ExecutionPolicy","Bypass","-File","`"$schedulerScript`""
+    Write-Host "  새 관리자 창에서 등록이 진행됩니다. 그 창의 결과를 확인하세요." -ForegroundColor Yellow
+  }
+} else {
+  Write-Host "`n나중에 등록하려면 (관리자 권한 PowerShell):" -ForegroundColor Cyan
+  Write-Host "  powershell -ExecutionPolicy Bypass -File scripts\setup-scheduler-windows.ps1"
 }
