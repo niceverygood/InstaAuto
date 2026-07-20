@@ -23,27 +23,27 @@ $accounts = @(
 )
 
 # ── 1. node 확인 ──
-Step "1/7 Node.js 확인"
+Step "1/8 Node.js 확인"
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
   Fail "Node.js 가 없습니다. https://nodejs.org 에서 LTS 설치 후 다시 실행하세요."
 }
 Ok "node $(node --version)"
 
 # ── 2. npm 의존성 ──
-Step "2/7 npm 의존성 설치"
+Step "2/8 npm 의존성 설치"
 if (-not (Test-Path "node_modules")) {
   npm install
   if ($LASTEXITCODE -ne 0) { Fail "npm install 실패" }
 } else { Ok "node_modules 이미 있음 (건너뜀)" }
 
 # ── 3. Playwright chromium (카드 이미지 렌더용) ──
-Step "3/7 Playwright chromium"
+Step "3/8 Playwright chromium"
 npx playwright install chromium
 if ($LASTEXITCODE -ne 0) { Fail "playwright chromium 설치 실패" }
 Ok "chromium 준비 완료"
 
 # ── 4. claude CLI 설치 + 로그인 확인 ──
-Step "4/7 claude CLI"
+Step "4/8 claude CLI"
 if (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
   Write-Host "  claude CLI 설치 중..."
   npm install -g "@anthropic-ai/claude-code"
@@ -63,7 +63,7 @@ if ($LASTEXITCODE -ne 0) {
 Ok "claude CLI 로그인 확인"
 
 # ── 5. 업로드 방식 선택 + 계정 준비 ──
-Step "5/7 업로드 방식"
+Step "5/8 업로드 방식"
 
 $apiReady = @($accounts | Where-Object { Test-Path "data\credentials-$($_.id).json" }).Count
 $webReady = @($accounts | Where-Object { Test-Path ".browser-profiles\$($_.id)\Default" }).Count
@@ -112,7 +112,7 @@ if ($mode -eq "1") {
 }
 
 # ── 6. .env 설정 (슬랙 알림 / R2 / 이미지) — 업로드 방식과 무관하게 항상 실행 ──
-Step "6/7 .env 설정 (슬랙 알림 등)"
+Step "6/8 .env 설정 (슬랙 알림 등)"
 
 $envPath = ".env"
 $envLines = @()
@@ -161,7 +161,7 @@ $envLines | Set-Content -Path $envPath -Encoding utf8
 Ok ".env 저장 완료"
 
 # ── 7. 업로드 실행 ──
-Step "7/7 업로드"
+Step "7/8 업로드"
 $go = Read-Host "지금 바로 두 계정 업로드를 실행할까요? (Y/n)"
 if ($go -eq "" -or $go -match "^[yY]") {
   foreach ($acc in $accounts) {
@@ -177,6 +177,20 @@ if ($go -eq "" -or $go -match "^[yY]") {
   Write-Host "  node scripts\run-once.js theone"
 }
 
-Write-Host "`n=== 다음 단계 ===" -ForegroundColor Cyan
-Write-Host "10분마다 자동으로 계속 발행되게 하려면 (관리자 권한 PowerShell):"
-Write-Host "  powershell -ExecutionPolicy Bypass -File scripts\setup-scheduler-windows.ps1"
+# ── 8. 스케줄러 등록 (10분마다 자동 반복) ──
+Step "8/8 자동 반복 스케줄러"
+$goSched = Read-Host "지금 10분마다 자동 발행되도록 등록할까요? (관리자 권한 필요) (Y/n)"
+if ($goSched -eq "" -or $goSched -match "^[yY]") {
+  $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  $schedulerScript = Join-Path $PSScriptRoot "setup-scheduler-windows.ps1"
+  if ($isAdmin) {
+    & $schedulerScript
+  } else {
+    Write-Host "  관리자 권한이 필요합니다 — Windows 보안 창(UAC)이 뜨면 '예'를 눌러주세요." -ForegroundColor Yellow
+    Start-Process powershell -Verb RunAs -ArgumentList "-NoExit","-ExecutionPolicy","Bypass","-File","`"$schedulerScript`""
+    Write-Host "  새 관리자 창에서 등록이 진행됩니다. 그 창의 결과를 확인하세요." -ForegroundColor Yellow
+  }
+} else {
+  Write-Host "`n나중에 등록하려면 (관리자 권한 PowerShell):" -ForegroundColor Cyan
+  Write-Host "  powershell -ExecutionPolicy Bypass -File scripts\setup-scheduler-windows.ps1"
+}
